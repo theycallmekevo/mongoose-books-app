@@ -60,13 +60,34 @@ app.post('/api/books', function (req, res) {
     image: req.body.image,
     releaseDate: req.body.releaseDate,
   });
+
   // find the author from req.body
   db.Author.findOne({name: req.body.author}, function(err, author){
     if (err) {
       return console.log(err);
     }
+    if(author === null){
+      console.log("We have encountered a new author!!!!");
+
+      var newAuthor = new db.Author({
+        name: req.body.author
+      });
+      newAuthor.save();
+
+      // add this author to the book
+      newBook.author = newAuthor;
+
+
+
+      // if author is not found, then create a new author
+      // then associate the book with the new author
+    }
+
+    //else
+    // the author exists, and you can do things normally
+
     // add this author to the book
-    newBook.author = author;
+
 
 
     // save newBook to database
@@ -92,6 +113,31 @@ app.delete('/api/books/:id', function (req, res) {
   });
 });
 
+
+// Create a character associated with a book
+  app.post('/api/books/:book_id/characters', function (req, res) {
+    // Get book id from url params (`req.params`)
+    var bookId = req.params.book_id;
+    db.Book.findById(bookId)
+      .populate('author') // Reference to author
+      // now we can worry about saving that character
+      .exec(function(err, foundBook) {
+        console.log(foundBook);
+        if (err) {
+          res.status(500).json({error: err.message});
+        } else if (foundBook === null) {
+          // Is this the same as checking if the foundBook is undefined?
+          res.status(404).json({error: "No Book found by this ID"});
+        } else {
+          // push character into characters array
+          foundBook.characters.push(req.body);
+          // save the book with the new character
+          foundBook.save();
+          res.status(201).json(foundBook);
+        }
+      }
+    );
+  });
 
 
 
